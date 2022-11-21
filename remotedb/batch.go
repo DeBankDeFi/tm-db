@@ -13,6 +13,7 @@ var errBatchClosed = errors.New("batch has been written or closed")
 type batch struct {
 	db  *RemoteDB
 	ops []*protodb.Operation
+	id  int32
 }
 
 var _ db.Batch = (*batch)(nil)
@@ -55,7 +56,7 @@ func (b *batch) Write() error {
 	if b.ops == nil {
 		return errBatchClosed
 	}
-	_, err := b.db.dc.BatchWrite(b.db.ctx, &protodb.Batch{Ops: b.ops})
+	_, err := b.db.dc.BatchWrite(b.db.ctx, &protodb.Batch{Id: b.id, Ops: b.ops})
 	if err != nil {
 		return fmt.Errorf("remoteDB.BatchWrite: %w", err)
 	}
@@ -69,7 +70,7 @@ func (b *batch) WriteSync() error {
 	if b.ops == nil {
 		return errBatchClosed
 	}
-	_, err := b.db.dc.BatchWriteSync(b.db.ctx, &protodb.Batch{Ops: b.ops})
+	_, err := b.db.dc.BatchWriteSync(b.db.ctx, &protodb.Batch{Id: b.id, Ops: b.ops})
 	if err != nil {
 		return fmt.Errorf("RemoteDB.BatchWriteSync: %w", err)
 	}

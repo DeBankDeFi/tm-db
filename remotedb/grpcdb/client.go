@@ -9,7 +9,7 @@ import (
 // NewClient creates a gRPC client connected to the bound gRPC server at serverAddr.
 // Use kind to set the level of security to either Secure or Insecure.
 func NewClient(serverAddr string) (protodb.DBClient, error) {
-	cc, err := grpc.Dial(serverAddr)
+	cc, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}

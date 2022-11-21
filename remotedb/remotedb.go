@@ -13,6 +13,7 @@ import (
 type RemoteDB struct {
 	ctx context.Context
 	dc  protodb.DBClient
+	id  int32
 }
 
 func NewRemoteDB(serverAddr string) (*RemoteDB, error) {
@@ -33,7 +34,8 @@ type Init struct {
 }
 
 func (rd *RemoteDB) InitRemote(in *Init) error {
-	_, err := rd.dc.Init(rd.ctx, &protodb.Init{Dir: in.Dir, Type: in.Type, Name: in.Name})
+	entry, err := rd.dc.Init(rd.ctx, &protodb.Init{Dir: in.Dir, Type: in.Type, Name: in.Name})
+	rd.id = entry.Id
 	return err
 }
 
@@ -45,35 +47,35 @@ func (rd *RemoteDB) Close() error {
 }
 
 func (rd *RemoteDB) Delete(key []byte) error {
-	if _, err := rd.dc.Delete(rd.ctx, &protodb.Entity{Key: key}); err != nil {
+	if _, err := rd.dc.Delete(rd.ctx, &protodb.Entity{Id: rd.id, Key: key}); err != nil {
 		return fmt.Errorf("remoteDB.Delete: %w", err)
 	}
 	return nil
 }
 
 func (rd *RemoteDB) DeleteSync(key []byte) error {
-	if _, err := rd.dc.DeleteSync(rd.ctx, &protodb.Entity{Key: key}); err != nil {
+	if _, err := rd.dc.DeleteSync(rd.ctx, &protodb.Entity{Id: rd.id, Key: key}); err != nil {
 		return fmt.Errorf("remoteDB.DeleteSync: %w", err)
 	}
 	return nil
 }
 
 func (rd *RemoteDB) Set(key, value []byte) error {
-	if _, err := rd.dc.Set(rd.ctx, &protodb.Entity{Key: key, Value: value}); err != nil {
+	if _, err := rd.dc.Set(rd.ctx, &protodb.Entity{Id: rd.id, Key: key, Value: value}); err != nil {
 		return fmt.Errorf("remoteDB.Set: %w", err)
 	}
 	return nil
 }
 
 func (rd *RemoteDB) SetSync(key, value []byte) error {
-	if _, err := rd.dc.SetSync(rd.ctx, &protodb.Entity{Key: key, Value: value}); err != nil {
+	if _, err := rd.dc.SetSync(rd.ctx, &protodb.Entity{Id: rd.id, Key: key, Value: value}); err != nil {
 		return fmt.Errorf("remoteDB.SetSync: %w", err)
 	}
 	return nil
 }
 
 func (rd *RemoteDB) Get(key []byte) ([]byte, error) {
-	res, err := rd.dc.Get(rd.ctx, &protodb.Entity{Key: key})
+	res, err := rd.dc.Get(rd.ctx, &protodb.Entity{Id: rd.id, Key: key})
 	if err != nil {
 		return nil, fmt.Errorf("remoteDB.Get error: %w", err)
 	}
@@ -81,7 +83,7 @@ func (rd *RemoteDB) Get(key []byte) ([]byte, error) {
 }
 
 func (rd *RemoteDB) Has(key []byte) (bool, error) {
-	res, err := rd.dc.Has(rd.ctx, &protodb.Entity{Key: key})
+	res, err := rd.dc.Has(rd.ctx, &protodb.Entity{Id: rd.id, Key: key})
 	if err != nil {
 		return false, err
 	}
@@ -89,7 +91,7 @@ func (rd *RemoteDB) Has(key []byte) (bool, error) {
 }
 
 func (rd *RemoteDB) ReverseIterator(start, end []byte) (db.Iterator, error) {
-	dic, err := rd.dc.ReverseIterator(rd.ctx, &protodb.Entity{Start: start, End: end})
+	dic, err := rd.dc.ReverseIterator(rd.ctx, &protodb.Entity{Id: rd.id, Start: start, End: end})
 	if err != nil {
 		return nil, fmt.Errorf("RemoteDB.Iterator error: %w", err)
 	}
@@ -107,7 +109,7 @@ func (rd *RemoteDB) Print() error {
 }
 
 func (rd *RemoteDB) Stats() map[string]string {
-	stats, err := rd.dc.Stats(rd.ctx, &protodb.Nothing{})
+	stats, err := rd.dc.Stats(rd.ctx, &protodb.Entity{})
 	if err != nil || stats == nil {
 		return nil
 	}

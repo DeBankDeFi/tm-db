@@ -34,8 +34,8 @@ func NewServer(opts ...grpc.ServerOption) (*grpc.Server, error) {
 }
 
 type server struct {
-	mu sync.Mutex
-	db db.DB
+	mu  sync.Mutex
+	dbs []db.DB
 }
 
 var _ protodb.DBServer = (*server)(nil)
@@ -57,16 +57,17 @@ func (s *server) Init(ctx context.Context, in *protodb.Init) (*protodb.Entity, e
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	var err error
-	s.db, err = db.NewDB(in.Name, db.BackendType(in.Type), in.Dir)
+	db, err := db.NewDB(in.Name, db.BackendType(in.Type), in.Dir)
 	if err != nil {
 		return nil, err
 	}
-	return &protodb.Entity{CreatedAt: time.Now().Unix()}, nil
+	id := len(s.dbs)
+	s.dbs = append(s.dbs, db)
+	return &protodb.Entity{Id: int32(id), CreatedAt: time.Now().Unix()}, nil
 }
 
 func (s *server) Delete(ctx context.Context, in *protodb.Entity) (*protodb.Nothing, error) {
-	err := s.db.Delete(in.Key)
+	err := s.dbs[in.Id].Delete(in.Key)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +77,7 @@ func (s *server) Delete(ctx context.Context, in *protodb.Entity) (*protodb.Nothi
 var nothing = new(protodb.Nothing)
 
 func (s *server) DeleteSync(ctx context.Context, in *protodb.Entity) (*protodb.Nothing, error) {
-	err := s.db.DeleteSync(in.Key)
+	err := s.dbs[in.Id].DeleteSync(in.Key)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +85,7 @@ func (s *server) DeleteSync(ctx context.Context, in *protodb.Entity) (*protodb.N
 }
 
 func (s *server) Get(ctx context.Context, in *protodb.Entity) (*protodb.Entity, error) {
-	value, err := s.db.Get(in.Key)
+	value, err := s.dbs[in.Id].Get(in.Key)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +130,7 @@ func (s *server) GetStream(ds protodb.DB_GetStreamServer) error {
 }
 
 func (s *server) Has(ctx context.Context, in *protodb.Entity) (*protodb.Entity, error) {
-	exists, err := s.db.Has(in.Key)
+	exists, err := s.dbs[in.Id].Has(in.Key)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +138,7 @@ func (s *server) Has(ctx context.Context, in *protodb.Entity) (*protodb.Entity, 
 }
 
 func (s *server) Set(ctx context.Context, in *protodb.Entity) (*protodb.Nothing, error) {
-	err := s.db.Set(in.Key, in.Value)
+	err := s.dbs[in.Id].Set(in.Key, in.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +146,7 @@ func (s *server) Set(ctx context.Context, in *protodb.Entity) (*protodb.Nothing,
 }
 
 func (s *server) SetSync(ctx context.Context, in *protodb.Entity) (*protodb.Nothing, error) {
-	err := s.db.SetSync(in.Key, in.Value)
+	err := s.dbs[in.Id].SetSync(in.Key, in.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +154,7 @@ func (s *server) SetSync(ctx context.Context, in *protodb.Entity) (*protodb.Noth
 }
 
 func (s *server) Iterator(query *protodb.Entity, dis protodb.DB_IteratorServer) error {
-	it, err := s.db.Iterator(query.Start, query.End)
+	it, err := s.dbs[query.Id].Iterator(query.Start, query.End)
 	if err != nil {
 		return err
 	}
@@ -185,7 +186,7 @@ func (s *server) handleIterator(it db.Iterator, sendFunc func(*protodb.Iterator)
 }
 
 func (s *server) ReverseIterator(query *protodb.Entity, dis protodb.DB_ReverseIteratorServer) error {
-	it, err := s.db.ReverseIterator(query.Start, query.End)
+	it, err := s.dbs[query.Id].ReverseIterator(query.Start, query.End)
 	if err != nil {
 		return err
 	}
@@ -193,8 +194,8 @@ func (s *server) ReverseIterator(query *protodb.Entity, dis protodb.DB_ReverseIt
 	return s.handleIterator(it, dis.Send)
 }
 
-func (s *server) Stats(context.Context, *protodb.Nothing) (*protodb.Stats, error) {
-	stats := s.db.Stats()
+func (s *server) Stats(c context.Context, in *protodb.Entity) (*protodb.Stats, error) {
+	stats := s.dbs[in.Id].Stats()
 	return &protodb.Stats{Data: stats, TimeAt: time.Now().Unix()}, nil
 }
 
@@ -207,7 +208,7 @@ func (s *server) BatchWriteSync(c context.Context, b *protodb.Batch) (*protodb.N
 }
 
 func (s *server) batchWrite(c context.Context, b *protodb.Batch, sync bool) (*protodb.Nothing, error) {
-	bat := s.db.NewBatch()
+	bat := s.dbs[b.Id].NewBatch()
 	defer bat.Close()
 	for _, op := range b.Ops {
 		switch op.Type {

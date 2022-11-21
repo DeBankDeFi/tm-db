@@ -13,11 +13,9 @@ import (
 )
 
 func TestRemoteDB(t *testing.T) {
-	cert := "test.crt"
-	key := "test.key"
 	ln, err := net.Listen("tcp", "localhost:0")
 	require.Nil(t, err, "expecting a port to have been assigned on which we can listen")
-	srv, err := grpcdb.NewServer(cert, key)
+	srv, err := grpcdb.NewServer()
 	require.Nil(t, err)
 	defer srv.Stop()
 	go func() {
@@ -26,7 +24,7 @@ func TestRemoteDB(t *testing.T) {
 		}
 	}()
 
-	client, err := remotedb.NewRemoteDB(ln.Addr().String(), cert)
+	client, err := remotedb.NewRemoteDB(ln.Addr().String())
 	require.Nil(t, err, "expecting a successful client creation")
 	dbName := "test-remote-db"
 	require.Nil(t, client.InitRemote(&remotedb.Init{Name: dbName, Type: "goleveldb"}))
