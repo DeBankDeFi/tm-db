@@ -8,16 +8,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/tendermint/tm-db/remotedb"
+	db "github.com/tendermint/tm-db"
 	"github.com/tendermint/tm-db/remotedb/grpcdb"
 )
 
 func TestRemoteDB(t *testing.T) {
-	cert := "test.crt"
-	key := "test.key"
 	ln, err := net.Listen("tcp", "localhost:0")
 	require.Nil(t, err, "expecting a port to have been assigned on which we can listen")
-	srv, err := grpcdb.NewServer(cert, key)
+	dbName := "test-remote-db"
+	srv, err := grpcdb.NewServer()
 	require.Nil(t, err)
 	defer srv.Stop()
 	go func() {
@@ -26,10 +25,11 @@ func TestRemoteDB(t *testing.T) {
 		}
 	}()
 
-	client, err := remotedb.NewRemoteDB(ln.Addr().String(), cert)
+	client, err := db.NewRemoteDB(ln.Addr().String())
 	require.Nil(t, err, "expecting a successful client creation")
-	dbName := "test-remote-db"
-	require.Nil(t, client.InitRemote(&remotedb.Init{Name: dbName, Type: "goleveldb"}))
+	err = client.InitRemote(&db.Init{Name: dbName, Type: "goleveldb"})
+	t.Logf("err:%v", err)
+	require.Nil(t, err)
 	defer os.RemoveAll(dbName + ".db")
 
 	k1 := []byte("key-1")
