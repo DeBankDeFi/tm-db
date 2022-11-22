@@ -23,6 +23,12 @@ func newBatch(rdb *RemoteDB) *batch {
 
 // Set implements Batch.
 func (b *batch) Set(key, value []byte) error {
+	if len(key) == 0 {
+		return errKeyEmpty
+	}
+	if value == nil {
+		return errValueNil
+	}
 	if b.ops == nil {
 		return errBatchClosed
 	}
@@ -36,6 +42,9 @@ func (b *batch) Set(key, value []byte) error {
 
 // Delete implements Batch.
 func (b *batch) Delete(key []byte) error {
+	if len(key) == 0 {
+		return errKeyEmpty
+	}
 	if b.ops == nil {
 		return errBatchClosed
 	}
