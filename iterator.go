@@ -1,18 +1,28 @@
 package db
 
 import (
+	"fmt"
+
 	protodb "github.com/tendermint/tm-db/proto"
 )
 
 func makeIterator(dic protodb.DB_IteratorClient) Iterator {
 	itr := &remoteIterator{dic: dic}
-	itr.Next() // We need to call Next to prime the iterator
+	var err error
+	itr.cur, err = dic.Recv()
+	if err != nil {
+		itr.err = err
+	}
 	return itr
 }
 
 func makeReverseIterator(dric protodb.DB_ReverseIteratorClient) Iterator {
 	rItr := &reverseIterator{dric: dric}
-	rItr.Next() // We need to call Next to prime the iterator
+	var err error
+	rItr.cur, err = dric.Recv()
+	if err != nil {
+		rItr.err = err
+	}
 	return rItr
 }
 
@@ -104,6 +114,7 @@ func (itr *remoteIterator) Next() {
 	var err error
 	itr.cur, err = itr.dic.Recv()
 	if err != nil {
+		fmt.Printf("error: %v",err)
 		itr.err = err
 	}
 }
