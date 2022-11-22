@@ -75,7 +75,7 @@ func (rItr *reverseIterator) Error() error {
 
 // Close implements Iterator.
 func (rItr *reverseIterator) Close() error {
-	return nil
+	return rItr.dric.CloseSend()
 }
 
 func (rItr *reverseIterator) assertIsValid() {
@@ -138,7 +138,7 @@ func (itr *remoteIterator) Error() error {
 
 // Close implements Iterator.
 func (itr *remoteIterator) Close() error {
-	return nil
+	return itr.dic.CloseSend()
 }
 
 func (itr *remoteIterator) assertIsValid() {

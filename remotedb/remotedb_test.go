@@ -16,7 +16,6 @@ func TestRemoteDB(t *testing.T) {
 	ln, err := net.Listen("tcp", "localhost:0")
 	require.Nil(t, err, "expecting a port to have been assigned on which we can listen")
 	dbName := "test-remote-db"
-	grpcdb.RemoteDir = "."
 	srv, err := grpcdb.NewServer()
 	require.Nil(t, err)
 	defer srv.Stop()

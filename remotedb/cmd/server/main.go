@@ -24,7 +24,7 @@ var (
 				fmt.Println("addr不能为空!")
 				os.Exit(-1)
 			}
-			if err := grpcdb.ListenAndServe(addr, "/evmos"); err != nil {
+			if err := grpcdb.ListenAndServe(addr); err != nil {
 				log.Fatalf("BindServer: %v", err)
 			}
 		},

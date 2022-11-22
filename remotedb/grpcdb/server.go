@@ -15,13 +15,10 @@ import (
 	protodb "github.com/tendermint/tm-db/proto"
 )
 
-var RemoteDir = "/evmos"
-
 // ListenAndServe is a blocking function that sets up a gRPC based
 // server at the address supplied, with the gRPC options passed in.
 // Normally in usage, invoke it in a goroutine like you would for http.ListenAndServe.
-func ListenAndServe(addr string, dir string, opts ...grpc.ServerOption) error {
-	RemoteDir = dir
+func ListenAndServe(addr string, opts ...grpc.ServerOption) error {
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
@@ -167,15 +164,12 @@ func (s *server) SetSync(ctx context.Context, in *protodb.Entity) (*protodb.Noth
 }
 
 func (s *server) Iterator(query *protodb.Entity, dis protodb.DB_IteratorServer) error {
-	fmt.Printf("RemoteDB.Iterator: from %d\n", query.Id)
-
 	it, err := s.dbs[query.Id].Iterator(query.Start, query.End)
 	if err != nil {
-		fmt.Printf("Error Iterator db: %v", err)
 		return err
 	}
 	out := &protodb.Iterator{
-		Valid:  it.Valid(),
+		Valid: it.Valid(),
 	}
 	if it.Valid() {
 		out.Key = it.Key()
@@ -188,9 +182,12 @@ func (s *server) Iterator(query *protodb.Entity, dis protodb.DB_IteratorServer) 
 			it.Close()
 			return nil
 		}
-		fmt.Printf("Error Iterator db: %v", err)
 		it.Close()
 		return err
+	}
+	if !it.Valid() {
+		it.Close()
+		return nil
 	}
 	return s.handleIterator(it, dis.Send)
 }
@@ -219,7 +216,7 @@ func (s *server) handleIterator(it db.Iterator, sendFunc func(*protodb.Iterator)
 		it.Next()
 	}
 	out := &protodb.Iterator{
-		Valid:  it.Valid(),
+		Valid: it.Valid(),
 	}
 	if err := sendFunc(out); err != nil {
 		if err == io.EOF {
@@ -232,14 +229,13 @@ func (s *server) handleIterator(it db.Iterator, sendFunc func(*protodb.Iterator)
 }
 
 func (s *server) ReverseIterator(query *protodb.Entity, dis protodb.DB_ReverseIteratorServer) error {
-	fmt.Printf("RemoteDB.ReverseIterator: from %d\n", query.Id)
 
 	it, err := s.dbs[query.Id].ReverseIterator(query.Start, query.End)
 	if err != nil {
 		return err
 	}
 	out := &protodb.Iterator{
-		Valid:  it.Valid(),
+		Valid: it.Valid(),
 	}
 	if it.Valid() {
 		out.Key = it.Key()
@@ -252,9 +248,12 @@ func (s *server) ReverseIterator(query *protodb.Entity, dis protodb.DB_ReverseIt
 			it.Close()
 			return nil
 		}
-		fmt.Printf("Error Iterator db: %v", err)
 		it.Close()
 		return err
+	}
+	if !it.Valid() {
+		it.Close()
+		return nil
 	}
 	return s.handleIterator(it, dis.Send)
 }
@@ -265,13 +264,11 @@ func (s *server) Stats(c context.Context, in *protodb.Entity) (*protodb.Stats, e
 }
 
 func (s *server) BatchWrite(c context.Context, b *protodb.Batch) (*protodb.Nothing, error) {
-	fmt.Printf("RemoteDB.BatchWrite: from %d\n", b.Id)
 
 	return s.batchWrite(c, b, false)
 }
 
 func (s *server) BatchWriteSync(c context.Context, b *protodb.Batch) (*protodb.Nothing, error) {
-	fmt.Printf("RemoteDB.BatchWriteSync: from %d\n", b.Id)
 
 	return s.batchWrite(c, b, true)
 }
