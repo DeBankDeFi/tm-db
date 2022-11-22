@@ -70,7 +70,7 @@ func NewLocalDB(name string, backend BackendType, dir string) (DB, error) {
 
 // NewDB creates a new database of type backend with the given name.
 func NewDB(name string, backend BackendType, dir string) (DB, error) {
-	fmt.Printf("NewDB name:%s backend:%s dir:%s RemoteDBAddr:%s ", name, backend, dir, RemoteDBAddr)
+	fmt.Printf("NewDB name:%s backend:%s dir:%s RemoteDBAddr:%s \n", name, backend, dir, RemoteDBAddr)
 	if RemoteDBAddr == "" {
 		return NewLocalDB(name, backend, dir)
 	} else {
@@ -78,7 +78,7 @@ func NewDB(name string, backend BackendType, dir string) (DB, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = db.InitRemote(&Init{Name: name, Type: string(backend)})
+		err = db.InitRemote(&Init{Name: name, Type: string(backend),Dir: dir})
 		return db, err
 	}
 }

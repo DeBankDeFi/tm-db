@@ -2,6 +2,7 @@ package grpcdb
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -48,20 +49,22 @@ var _ protodb.DBServer = (*server)(nil)
 //
 // Dir is the directory on the file system in which the DB will be stored(if backed by disk) (TODO: remove)
 //
-// Name is representative filesystem entry's basepath
+// # Name is representative filesystem entry's basepath
 //
 // Type can be either one of:
-//  * cleveldb (if built with gcc enabled)
-//  * fsdb
-//  * memdB
-//  * goleveldb
+//   - cleveldb (if built with gcc enabled)
+//   - fsdb
+//   - memdB
+//   - goleveldb
+//
 // See https://godoc.org/github.com/tendermint/tendermint/libs/db#BackendType
 func (s *server) Init(ctx context.Context, in *protodb.Init) (*protodb.Entity, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
-	db, err := db.NewDB(in.Name, db.BackendType(in.Type), RemoteDir)
+	fmt.Printf("in.Name %s, in.Dir %s,in.Type %v", in.Name, in.Dir, in.Type)
+	db, err := db.NewLocalDB(in.Name, db.BackendType(in.Type), in.Dir)
 	if err != nil {
+		fmt.Printf("in.Name %s, in.Dir %s, Error creating db: %v \n", in.Name, in.Dir, err)
 		return nil, err
 	}
 	id := len(s.dbs)
@@ -90,6 +93,7 @@ func (s *server) DeleteSync(ctx context.Context, in *protodb.Entity) (*protodb.N
 func (s *server) Get(ctx context.Context, in *protodb.Entity) (*protodb.Entity, error) {
 	value, err := s.dbs[in.Id].Get(in.Key)
 	if err != nil {
+		fmt.Printf("Error Get db: %v", err)
 		return nil, err
 	}
 	return &protodb.Entity{Value: value}, nil
@@ -135,6 +139,7 @@ func (s *server) GetStream(ds protodb.DB_GetStreamServer) error {
 func (s *server) Has(ctx context.Context, in *protodb.Entity) (*protodb.Entity, error) {
 	exists, err := s.dbs[in.Id].Has(in.Key)
 	if err != nil {
+		fmt.Printf("Error Get db: %v", err)
 		return nil, err
 	}
 	return &protodb.Entity{Exists: exists}, nil
@@ -143,6 +148,7 @@ func (s *server) Has(ctx context.Context, in *protodb.Entity) (*protodb.Entity, 
 func (s *server) Set(ctx context.Context, in *protodb.Entity) (*protodb.Nothing, error) {
 	err := s.dbs[in.Id].Set(in.Key, in.Value)
 	if err != nil {
+		fmt.Printf("Error Set db: %v", err)
 		return nil, err
 	}
 	return nothing, nil
@@ -159,6 +165,7 @@ func (s *server) SetSync(ctx context.Context, in *protodb.Entity) (*protodb.Noth
 func (s *server) Iterator(query *protodb.Entity, dis protodb.DB_IteratorServer) error {
 	it, err := s.dbs[query.Id].Iterator(query.Start, query.End)
 	if err != nil {
+		fmt.Printf("Error Iterator db: %v", err)
 		return err
 	}
 	defer it.Close()
@@ -178,6 +185,7 @@ func (s *server) handleIterator(it db.Iterator, sendFunc func(*protodb.Iterator)
 			Value:  value,
 		}
 		if err := sendFunc(out); err != nil {
+			fmt.Printf("Error Iterator db: %v", err)
 			return err
 		}
 
