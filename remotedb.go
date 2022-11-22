@@ -133,7 +133,7 @@ func (rd *RemoteDB) Stats() map[string]string {
 }
 
 func (rd *RemoteDB) Iterator(start, end []byte) (Iterator, error) {
-	dic, err := rd.dc.Iterator(rd.ctx, &protodb.Entity{Start: start, End: end})
+	dic, err := rd.dc.Iterator(rd.ctx, &protodb.Entity{Id: rd.id, Start: start, End: end})
 	if err != nil {
 		return nil, fmt.Errorf("RemoteDB.Iterator error: %w", err)
 	}
