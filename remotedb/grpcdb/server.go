@@ -3,6 +3,7 @@ package grpcdb
 import (
 	"context"
 	"fmt"
+	"math"
 	"net"
 	"sync"
 	"time"
@@ -32,6 +33,8 @@ func ListenAndServe(addr string, dir string, opts ...grpc.ServerOption) error {
 }
 
 func NewServer(opts ...grpc.ServerOption) (*grpc.Server, error) {
+	opts = append(opts, grpc.MaxRecvMsgSize(math.MaxInt32))
+	opts = append(opts, grpc.MaxSendMsgSize(math.MaxInt32))
 	srv := grpc.NewServer(opts...)
 	protodb.RegisterDBServer(srv, new(server))
 	return srv, nil
@@ -61,7 +64,7 @@ var _ protodb.DBServer = (*server)(nil)
 func (s *server) Init(ctx context.Context, in *protodb.Init) (*protodb.Entity, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	fmt.Printf("in.Name %s, in.Dir %s,in.Type %v", in.Name, in.Dir, in.Type)
+	fmt.Printf("in.Name %s, in.Dir %s,in.Type %v\n", in.Name, in.Dir, in.Type)
 	db, err := db.NewLocalDB(in.Name, db.BackendType(in.Type), in.Dir)
 	if err != nil {
 		fmt.Printf("in.Name %s, in.Dir %s, Error creating db: %v \n", in.Name, in.Dir, err)

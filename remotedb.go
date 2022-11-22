@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 
 	protodb "github.com/tendermint/tm-db/proto"
 	"google.golang.org/grpc"
@@ -20,7 +21,8 @@ type RemoteDB struct {
 // NewClient creates a gRPC client connected to the bound gRPC server at serverAddr.
 // Use kind to set the level of security to either Secure or Insecure.
 func NewClient(serverAddr string) (protodb.DBClient, error) {
-	cc, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	diaOpt := grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(math.MaxInt32), grpc.MaxCallSendMsgSize(math.MaxInt32))
+	cc, err := grpc.Dial(serverAddr, grpc.WithInsecure(), diaOpt)
 	if err != nil {
 		return nil, err
 	}
