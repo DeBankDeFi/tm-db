@@ -127,7 +127,7 @@ func (itr *remoteIterator) Error() error {
 
 // Close implements Iterator.
 func (itr *remoteIterator) Close() error {
-	return itr.dic.CloseSend()
+	return nil
 }
 
 func (itr *remoteIterator) assertIsValid() {

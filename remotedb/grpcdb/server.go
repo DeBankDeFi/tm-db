@@ -166,6 +166,8 @@ func (s *server) SetSync(ctx context.Context, in *protodb.Entity) (*protodb.Noth
 }
 
 func (s *server) Iterator(query *protodb.Entity, dis protodb.DB_IteratorServer) error {
+	fmt.Printf("RemoteDB.Iterator: from %d\n",query.Id)
+
 	it, err := s.dbs[query.Id].Iterator(query.Start, query.End)
 	if err != nil {
 		fmt.Printf("Error Iterator db: %v", err)
@@ -200,6 +202,9 @@ func (s *server) handleIterator(it db.Iterator, sendFunc func(*protodb.Iterator)
 }
 
 func (s *server) ReverseIterator(query *protodb.Entity, dis protodb.DB_ReverseIteratorServer) error {
+	fmt.Printf("RemoteDB.ReverseIterator: from %d\n",query.Id)
+
+
 	it, err := s.dbs[query.Id].ReverseIterator(query.Start, query.End)
 	if err != nil {
 		return err
@@ -214,10 +219,14 @@ func (s *server) Stats(c context.Context, in *protodb.Entity) (*protodb.Stats, e
 }
 
 func (s *server) BatchWrite(c context.Context, b *protodb.Batch) (*protodb.Nothing, error) {
+	fmt.Printf("RemoteDB.BatchWrite: from %d\n",b.Id)
+
 	return s.batchWrite(c, b, false)
 }
 
 func (s *server) BatchWriteSync(c context.Context, b *protodb.Batch) (*protodb.Nothing, error) {
+	fmt.Printf("RemoteDB.BatchWriteSync: from %d\n",b.Id)
+
 	return s.batchWrite(c, b, true)
 }
 

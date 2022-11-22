@@ -125,7 +125,7 @@ func (rd *RemoteDB) Print() error {
 }
 
 func (rd *RemoteDB) Stats() map[string]string {
-	stats, err := rd.dc.Stats(rd.ctx, &protodb.Entity{})
+	stats, err := rd.dc.Stats(rd.ctx, &protodb.Entity{Id: rd.id})
 	if err != nil || stats == nil {
 		return nil
 	}
