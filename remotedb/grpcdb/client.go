@@ -3,7 +3,7 @@ package grpcdb
 import (
 	"google.golang.org/grpc"
 
-	protodb "github.com/tendermint/tm-db/remotedb/proto"
+	protodb "github.com/tendermint/tm-db/proto"
 )
 
 // NewClient creates a gRPC client connected to the bound gRPC server at serverAddr.

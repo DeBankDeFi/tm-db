@@ -1,14 +1,10 @@
-package remotedb
+package db
 
 import (
-	"errors"
 	"fmt"
 
-	db "github.com/tendermint/tm-db"
-	protodb "github.com/tendermint/tm-db/remotedb/proto"
+	protodb "github.com/tendermint/tm-db/proto"
 )
-
-var errBatchClosed = errors.New("batch has been written or closed")
 
 type batch struct {
 	db  *RemoteDB
@@ -16,7 +12,7 @@ type batch struct {
 	id  int32
 }
 
-var _ db.Batch = (*batch)(nil)
+var _ Batch = (*batch)(nil)
 
 func newBatch(rdb *RemoteDB) *batch {
 	return &batch{

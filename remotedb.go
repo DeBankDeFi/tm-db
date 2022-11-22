@@ -1,14 +1,15 @@
-package remotedb
+package db
 
 import (
 	"context"
 	"errors"
 	"fmt"
 
-	db "github.com/tendermint/tm-db"
-	"github.com/tendermint/tm-db/remotedb/grpcdb"
-	protodb "github.com/tendermint/tm-db/remotedb/proto"
+	protodb "github.com/tendermint/tm-db/proto"
+	"google.golang.org/grpc"
 )
+
+var RemoteDBAddr = ""
 
 type RemoteDB struct {
 	ctx context.Context
@@ -16,8 +17,18 @@ type RemoteDB struct {
 	id  int32
 }
 
+// NewClient creates a gRPC client connected to the bound gRPC server at serverAddr.
+// Use kind to set the level of security to either Secure or Insecure.
+func NewClient(serverAddr string) (protodb.DBClient, error) {
+	cc, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	if err != nil {
+		return nil, err
+	}
+	return protodb.NewDBClient(cc), nil
+}
+
 func NewRemoteDB(serverAddr string) (*RemoteDB, error) {
-	return newRemoteDB(grpcdb.NewClient(serverAddr))
+	return newRemoteDB(NewClient(serverAddr))
 }
 
 func newRemoteDB(gdc protodb.DBClient, err error) (*RemoteDB, error) {
@@ -35,11 +46,14 @@ type Init struct {
 
 func (rd *RemoteDB) InitRemote(in *Init) error {
 	entry, err := rd.dc.Init(rd.ctx, &protodb.Init{Dir: in.Dir, Type: in.Type, Name: in.Name})
+	if err != nil {
+		return err
+	}
 	rd.id = entry.Id
 	return err
 }
 
-var _ db.DB = (*RemoteDB)(nil)
+var _ DB = (*RemoteDB)(nil)
 
 // Close is a noop currently
 func (rd *RemoteDB) Close() error {
@@ -90,7 +104,7 @@ func (rd *RemoteDB) Has(key []byte) (bool, error) {
 	return res.Exists, nil
 }
 
-func (rd *RemoteDB) ReverseIterator(start, end []byte) (db.Iterator, error) {
+func (rd *RemoteDB) ReverseIterator(start, end []byte) (Iterator, error) {
 	dic, err := rd.dc.ReverseIterator(rd.ctx, &protodb.Entity{Id: rd.id, Start: start, End: end})
 	if err != nil {
 		return nil, fmt.Errorf("RemoteDB.Iterator error: %w", err)
@@ -98,7 +112,7 @@ func (rd *RemoteDB) ReverseIterator(start, end []byte) (db.Iterator, error) {
 	return makeReverseIterator(dic), nil
 }
 
-func (rd *RemoteDB) NewBatch() db.Batch {
+func (rd *RemoteDB) NewBatch() Batch {
 	return newBatch(rd)
 }
 
@@ -116,7 +130,7 @@ func (rd *RemoteDB) Stats() map[string]string {
 	return stats.Data
 }
 
-func (rd *RemoteDB) Iterator(start, end []byte) (db.Iterator, error) {
+func (rd *RemoteDB) Iterator(start, end []byte) (Iterator, error) {
 	dic, err := rd.dc.Iterator(rd.ctx, &protodb.Entity{Start: start, End: end})
 	if err != nil {
 		return nil, fmt.Errorf("RemoteDB.Iterator error: %w", err)

@@ -9,13 +9,16 @@ import (
 	"google.golang.org/grpc"
 
 	db "github.com/tendermint/tm-db"
-	protodb "github.com/tendermint/tm-db/remotedb/proto"
+	protodb "github.com/tendermint/tm-db/proto"
 )
+
+var RemoteDir = "/evmos"
 
 // ListenAndServe is a blocking function that sets up a gRPC based
 // server at the address supplied, with the gRPC options passed in.
 // Normally in usage, invoke it in a goroutine like you would for http.ListenAndServe.
-func ListenAndServe(addr string, opts ...grpc.ServerOption) error {
+func ListenAndServe(addr string, dir string, opts ...grpc.ServerOption) error {
+	RemoteDir = dir
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
@@ -57,7 +60,7 @@ func (s *server) Init(ctx context.Context, in *protodb.Init) (*protodb.Entity, e
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	db, err := db.NewDB(in.Name, db.BackendType(in.Type), in.Dir)
+	db, err := db.NewDB(in.Name, db.BackendType(in.Type), RemoteDir)
 	if err != nil {
 		return nil, err
 	}

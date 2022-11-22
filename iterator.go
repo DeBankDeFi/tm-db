@@ -1,17 +1,16 @@
-package remotedb
+package db
 
 import (
-	db "github.com/tendermint/tm-db"
-	protodb "github.com/tendermint/tm-db/remotedb/proto"
+	protodb "github.com/tendermint/tm-db/proto"
 )
 
-func makeIterator(dic protodb.DB_IteratorClient) db.Iterator {
-	itr := &iterator{dic: dic}
+func makeIterator(dic protodb.DB_IteratorClient) Iterator {
+	itr := &remoteIterator{dic: dic}
 	itr.Next() // We need to call Next to prime the iterator
 	return itr
 }
 
-func makeReverseIterator(dric protodb.DB_ReverseIteratorClient) db.Iterator {
+func makeReverseIterator(dric protodb.DB_ReverseIteratorClient) Iterator {
 	rItr := &reverseIterator{dric: dric}
 	rItr.Next() // We need to call Next to prime the iterator
 	return rItr
@@ -23,7 +22,7 @@ type reverseIterator struct {
 	err  error
 }
 
-var _ db.Iterator = (*iterator)(nil)
+var _ Iterator = (*remoteIterator)(nil)
 
 // Valid implements Iterator.
 func (rItr *reverseIterator) Valid() bool {
@@ -75,25 +74,25 @@ func (rItr *reverseIterator) assertIsValid() {
 	}
 }
 
-// iterator implements the db.Iterator by retrieving
+// remoteIterator implements the db.Iterator by retrieving
 // streamed iterators from the remote backend as
 // needed. It is NOT safe for concurrent usage,
 // matching the behavior of other iterators.
-type iterator struct {
+type remoteIterator struct {
 	dic protodb.DB_IteratorClient
 	cur *protodb.Iterator
 	err error
 }
 
-var _ db.Iterator = (*iterator)(nil)
+var _ Iterator = (*remoteIterator)(nil)
 
 // Valid implements Iterator.
-func (itr *iterator) Valid() bool {
+func (itr *remoteIterator) Valid() bool {
 	return itr.cur != nil && itr.cur.Valid && itr.err == nil
 }
 
 // Domain implements Iterator.
-func (itr *iterator) Domain() (start, end []byte) {
+func (itr *remoteIterator) Domain() (start, end []byte) {
 	if itr.cur == nil || itr.cur.Domain == nil {
 		return nil, nil
 	}
@@ -101,7 +100,7 @@ func (itr *iterator) Domain() (start, end []byte) {
 }
 
 // Next implements Iterator.
-func (itr *iterator) Next() {
+func (itr *remoteIterator) Next() {
 	var err error
 	itr.cur, err = itr.dic.Recv()
 	if err != nil {
@@ -110,28 +109,28 @@ func (itr *iterator) Next() {
 }
 
 // Key implements Iterator.
-func (itr *iterator) Key() []byte {
+func (itr *remoteIterator) Key() []byte {
 	itr.assertIsValid()
 	return itr.cur.Key
 }
 
 // Value implements Iterator.
-func (itr *iterator) Value() []byte {
+func (itr *remoteIterator) Value() []byte {
 	itr.assertIsValid()
 	return itr.cur.Value
 }
 
 // Error implements Iterator.
-func (itr *iterator) Error() error {
+func (itr *remoteIterator) Error() error {
 	return itr.err
 }
 
 // Close implements Iterator.
-func (itr *iterator) Close() error {
+func (itr *remoteIterator) Close() error {
 	return itr.dic.CloseSend()
 }
 
-func (itr *iterator) assertIsValid() {
+func (itr *remoteIterator) assertIsValid() {
 	if !itr.Valid() {
 		panic("iterator is invalid")
 	}
