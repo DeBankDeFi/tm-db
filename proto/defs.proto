@@ -2,15 +2,9 @@ syntax = "proto3";
 
 package protodb;
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-
-// Generate tests
-option (gogoproto.populate_all) = true;
-option (gogoproto.equal_all) = true;
-option (gogoproto.testgen_all) = true;
-
 message Batch {
-  repeated Operation ops = 1;
+  int32 id	= 1;
+  repeated Operation ops = 2;
 }
 
 message Operation {
@@ -71,8 +65,7 @@ service DB {
   rpc deleteSync(Entity) returns (Nothing) {}
   rpc iterator(Entity) returns (stream Iterator) {}
   rpc reverseIterator(Entity) returns (stream Iterator) {}
-  // rpc print(Nothing) returns (Entity) {}
-  rpc stats(Nothing) returns (Stats) {}
+  rpc stats(Entity) returns (Stats) {}
   rpc batchWrite(Batch) returns (Nothing) {}
   rpc batchWriteSync(Batch) returns (Nothing) {}
 }

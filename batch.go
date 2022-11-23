@@ -1,21 +1,18 @@
-package remotedb
+package db
 
 import (
-	"errors"
 	"fmt"
 
-	db "github.com/tendermint/tm-db"
-	protodb "github.com/tendermint/tm-db/remotedb/proto"
+	protodb "github.com/tendermint/tm-db/proto"
 )
-
-var errBatchClosed = errors.New("batch has been written or closed")
 
 type batch struct {
 	db  *RemoteDB
 	ops []*protodb.Operation
+	id  int32
 }
 
-var _ db.Batch = (*batch)(nil)
+var _ Batch = (*batch)(nil)
 
 func newBatch(rdb *RemoteDB) *batch {
 	return &batch{
@@ -26,8 +23,17 @@ func newBatch(rdb *RemoteDB) *batch {
 
 // Set implements Batch.
 func (b *batch) Set(key, value []byte) error {
+	if len(key) == 0 {
+		return errKeyEmpty
+	}
+	if value == nil {
+		return errValueNil
+	}
 	if b.ops == nil {
 		return errBatchClosed
+	}
+	if ReadOnly {
+		return nil
 	}
 	op := &protodb.Operation{
 		Entity: &protodb.Entity{Key: key, Value: value},
@@ -39,8 +45,14 @@ func (b *batch) Set(key, value []byte) error {
 
 // Delete implements Batch.
 func (b *batch) Delete(key []byte) error {
+	if len(key) == 0 {
+		return errKeyEmpty
+	}
 	if b.ops == nil {
 		return errBatchClosed
+	}
+	if ReadOnly {
+		return nil
 	}
 	op := &protodb.Operation{
 		Entity: &protodb.Entity{Key: key},
@@ -55,7 +67,10 @@ func (b *batch) Write() error {
 	if b.ops == nil {
 		return errBatchClosed
 	}
-	_, err := b.db.dc.BatchWrite(b.db.ctx, &protodb.Batch{Ops: b.ops})
+	if ReadOnly {
+		return nil
+	}
+	_, err := b.db.dc.BatchWrite(b.db.ctx, &protodb.Batch{Id: b.id, Ops: b.ops})
 	if err != nil {
 		return fmt.Errorf("remoteDB.BatchWrite: %w", err)
 	}
@@ -69,7 +84,10 @@ func (b *batch) WriteSync() error {
 	if b.ops == nil {
 		return errBatchClosed
 	}
-	_, err := b.db.dc.BatchWriteSync(b.db.ctx, &protodb.Batch{Ops: b.ops})
+	if ReadOnly {
+		return nil
+	}
+	_, err := b.db.dc.BatchWriteSync(b.db.ctx, &protodb.Batch{Id: b.id, Ops: b.ops})
 	if err != nil {
 		return fmt.Errorf("RemoteDB.BatchWriteSync: %w", err)
 	}
