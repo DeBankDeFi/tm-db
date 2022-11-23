@@ -49,8 +49,8 @@ func registerDBCreator(backend BackendType, creator dbCreator, force bool) {
 	backends[backend] = creator
 }
 
-// NewDB creates a new database of type backend with the given name.
-func NewDB(name string, backend BackendType, dir string) (DB, error) {
+// NewLocalDB creates a new database of type backend with the given name.
+func NewLocalDB(name string, backend BackendType, dir string) (DB, error) {
 	dbCreator, ok := backends[backend]
 	if !ok {
 		keys := make([]string, 0, len(backends))
@@ -66,4 +66,19 @@ func NewDB(name string, backend BackendType, dir string) (DB, error) {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
 	return db, nil
+}
+
+// NewDB creates a new database of type backend with the given name.
+func NewDB(name string, backend BackendType, dir string) (DB, error) {
+	fmt.Printf("NewDB name:%s backend:%s dir:%s RemoteDBAddr:%s \n", name, backend, dir, RemoteDBAddr)
+	if RemoteDBAddr == "" {
+		return NewLocalDB(name, backend, dir)
+	} else {
+		db, err := NewRemoteDB(RemoteDBAddr)
+		if err != nil {
+			return nil, err
+		}
+		err = db.InitRemote(&Init{Name: name, Type: string(backend),Dir: dir})
+		return db, err
+	}
 }
