@@ -113,8 +113,10 @@ func (rd *RemoteDB) Get(key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("remoteDB.Get error: %w", err)
 	}
-	if res == nil {
-		res.Value = []byte{}
+	if res.Exists {
+		if res == nil {
+			res.Value = []byte{}
+		}
 	}
 	return res.Value, nil
 }

@@ -109,7 +109,13 @@ func (s *server) Get(ctx context.Context, in *protodb.Entity) (*protodb.Entity, 
 		fmt.Printf("Error Get db: %v", err)
 		return nil, err
 	}
-	return &protodb.Entity{Value: value}, nil
+	res := &protodb.Entity{Value: value}
+	if value == nil {
+		res.Exists = false
+	} else {
+		res.Exists = true
+	}
+	return res, nil
 }
 
 func (s *server) GetStream(ds protodb.DB_GetStreamServer) error {
@@ -176,7 +182,7 @@ func (s *server) SetSync(ctx context.Context, in *protodb.Entity) (*protodb.Noth
 }
 
 func (s *server) Iterator(query *protodb.Entity, dis protodb.DB_IteratorServer) error {
-	fmt.Printf("RemoteDB.Iterator: from id %v",query.Id)
+	fmt.Printf("RemoteDB.Iterator: from id %v", query.Id)
 	it, err := s.dbs[query.Id].db.Iterator(query.Start, query.End)
 	if err != nil {
 		return err
