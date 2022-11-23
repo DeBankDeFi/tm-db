@@ -40,7 +40,7 @@ func NewGoLevelDBWithOpts(name string, dir string, o *opt.Options) (*GoLevelDB, 
 }
 
 // Get implements DB.
-func (db *GoLevelDB) Get(key []byte) ([]byte, error) {
+func (db *GoLevelDB) innerGet(key []byte) ([]byte, error) {
 	if len(key) == 0 {
 		return nil, errKeyEmpty
 	}
@@ -52,6 +52,15 @@ func (db *GoLevelDB) Get(key []byte) ([]byte, error) {
 		return nil, err
 	}
 	return res, nil
+}
+
+// Get implements DB.
+func (db *GoLevelDB) Get(key []byte) ([]byte, error) {
+	val, err := db.innerGet(key)
+	if LOG_ON {
+		fmt.Printf("Get %X -> %X\n", key, val)
+	}
+	return val, err
 }
 
 // Has implements DB.

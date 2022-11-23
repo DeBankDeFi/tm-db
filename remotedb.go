@@ -106,6 +106,14 @@ func (rd *RemoteDB) SetSync(key, value []byte) error {
 }
 
 func (rd *RemoteDB) Get(key []byte) ([]byte, error) {
+	val, err := rd.innerGet(key)
+	if LOG_ON {
+		fmt.Printf("Get %X -> %X\n", key, val)
+	}
+	return val, err
+}
+
+func (rd *RemoteDB) innerGet(key []byte) ([]byte, error) {
 	if len(key) == 0 {
 		return nil, errKeyEmpty
 	}
