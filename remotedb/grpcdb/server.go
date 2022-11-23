@@ -40,7 +40,12 @@ func NewServer(opts ...grpc.ServerOption) (*grpc.Server, error) {
 
 type server struct {
 	mu  sync.Mutex
-	dbs []db.DB
+	dbs []dbInfo
+}
+
+type dbInfo struct {
+	db   db.DB
+	path string
 }
 
 var _ protodb.DBServer = (*server)(nil)
@@ -63,18 +68,25 @@ func (s *server) Init(ctx context.Context, in *protodb.Init) (*protodb.Entity, e
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	fmt.Printf("in.Name %s, in.Dir %s,in.Type %v\n", in.Name, in.Dir, in.Type)
+	path := fmt.Sprintf("%s/%s", in.Dir, in.Name)
+	for id, dbInfo := range s.dbs {
+		if dbInfo.path == path {
+			return &protodb.Entity{Id: int32(id)}, nil
+		}
+	}
+
 	db, err := db.NewLocalDB(in.Name, db.BackendType(in.Type), in.Dir)
 	if err != nil {
 		fmt.Printf("in.Name %s, in.Dir %s, Error creating db: %v \n", in.Name, in.Dir, err)
 		return nil, err
 	}
 	id := len(s.dbs)
-	s.dbs = append(s.dbs, db)
+	s.dbs = append(s.dbs, dbInfo{db: db, path: path})
 	return &protodb.Entity{Id: int32(id), CreatedAt: time.Now().Unix()}, nil
 }
 
 func (s *server) Delete(ctx context.Context, in *protodb.Entity) (*protodb.Nothing, error) {
-	err := s.dbs[in.Id].Delete(in.Key)
+	err := s.dbs[in.Id].db.Delete(in.Key)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +96,7 @@ func (s *server) Delete(ctx context.Context, in *protodb.Entity) (*protodb.Nothi
 var nothing = new(protodb.Nothing)
 
 func (s *server) DeleteSync(ctx context.Context, in *protodb.Entity) (*protodb.Nothing, error) {
-	err := s.dbs[in.Id].DeleteSync(in.Key)
+	err := s.dbs[in.Id].db.DeleteSync(in.Key)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +104,7 @@ func (s *server) DeleteSync(ctx context.Context, in *protodb.Entity) (*protodb.N
 }
 
 func (s *server) Get(ctx context.Context, in *protodb.Entity) (*protodb.Entity, error) {
-	value, err := s.dbs[in.Id].Get(in.Key)
+	value, err := s.dbs[in.Id].db.Get(in.Key)
 	if err != nil {
 		fmt.Printf("Error Get db: %v", err)
 		return nil, err
@@ -138,7 +150,7 @@ func (s *server) GetStream(ds protodb.DB_GetStreamServer) error {
 }
 
 func (s *server) Has(ctx context.Context, in *protodb.Entity) (*protodb.Entity, error) {
-	exists, err := s.dbs[in.Id].Has(in.Key)
+	exists, err := s.dbs[in.Id].db.Has(in.Key)
 	if err != nil {
 		fmt.Printf("Error Get db: %v", err)
 		return nil, err
@@ -147,7 +159,7 @@ func (s *server) Has(ctx context.Context, in *protodb.Entity) (*protodb.Entity, 
 }
 
 func (s *server) Set(ctx context.Context, in *protodb.Entity) (*protodb.Nothing, error) {
-	err := s.dbs[in.Id].Set(in.Key, in.Value)
+	err := s.dbs[in.Id].db.Set(in.Key, in.Value)
 	if err != nil {
 		fmt.Printf("Error Set db: %v", err)
 		return nil, err
@@ -156,7 +168,7 @@ func (s *server) Set(ctx context.Context, in *protodb.Entity) (*protodb.Nothing,
 }
 
 func (s *server) SetSync(ctx context.Context, in *protodb.Entity) (*protodb.Nothing, error) {
-	err := s.dbs[in.Id].SetSync(in.Key, in.Value)
+	err := s.dbs[in.Id].db.SetSync(in.Key, in.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +176,8 @@ func (s *server) SetSync(ctx context.Context, in *protodb.Entity) (*protodb.Noth
 }
 
 func (s *server) Iterator(query *protodb.Entity, dis protodb.DB_IteratorServer) error {
-	it, err := s.dbs[query.Id].Iterator(query.Start, query.End)
+	fmt.Printf("RemoteDB.Iterator: from id %v",query.Id)
+	it, err := s.dbs[query.Id].db.Iterator(query.Start, query.End)
 	if err != nil {
 		return err
 	}
@@ -210,7 +223,6 @@ func (s *server) handleIterator(it db.Iterator, sendFunc func(*protodb.Iterator)
 			if err == io.EOF {
 				return nil
 			}
-			fmt.Printf("Error Iterator db: %v", err)
 			return err
 		}
 		it.Next()
@@ -222,15 +234,13 @@ func (s *server) handleIterator(it db.Iterator, sendFunc func(*protodb.Iterator)
 		if err == io.EOF {
 			return nil
 		}
-		fmt.Printf("Error Iterator db: %v", err)
 		return err
 	}
 	return nil
 }
 
 func (s *server) ReverseIterator(query *protodb.Entity, dis protodb.DB_ReverseIteratorServer) error {
-
-	it, err := s.dbs[query.Id].ReverseIterator(query.Start, query.End)
+	it, err := s.dbs[query.Id].db.ReverseIterator(query.Start, query.End)
 	if err != nil {
 		return err
 	}
@@ -259,7 +269,7 @@ func (s *server) ReverseIterator(query *protodb.Entity, dis protodb.DB_ReverseIt
 }
 
 func (s *server) Stats(c context.Context, in *protodb.Entity) (*protodb.Stats, error) {
-	stats := s.dbs[in.Id].Stats()
+	stats := s.dbs[in.Id].db.Stats()
 	return &protodb.Stats{Data: stats, TimeAt: time.Now().Unix()}, nil
 }
 
@@ -274,13 +284,19 @@ func (s *server) BatchWriteSync(c context.Context, b *protodb.Batch) (*protodb.N
 }
 
 func (s *server) batchWrite(c context.Context, b *protodb.Batch, sync bool) (*protodb.Nothing, error) {
-	bat := s.dbs[b.Id].NewBatch()
+	bat := s.dbs[b.Id].db.NewBatch()
 	defer bat.Close()
 	for _, op := range b.Ops {
 		switch op.Type {
 		case protodb.Operation_SET:
-			err := bat.Set(op.Entity.Key, op.Entity.Value)
+			key := op.Entity.Key
+			val := op.Entity.Value
+			if val == nil {
+				val = []byte{}
+			}
+			err := bat.Set(key, val)
 			if err != nil {
+				fmt.Printf("Error BatchWrite db: %v, op:%v, ops:%v", err, op.String(), b.String())
 				return nil, err
 			}
 		case protodb.Operation_DELETE:

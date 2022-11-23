@@ -33,11 +33,15 @@ var (
 )
 
 func main() {
-	rootCmd.AddCommand(serverCmd)
-	serverCmd.Flags().StringVar(&addr, "addr", "", "地址")
+	// rootCmd.AddCommand(serverCmd)
+	// serverCmd.Flags().StringVar(&addr, "addr", "", "地址")
 
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+	// if err := rootCmd.Execute(); err != nil {
+	// 	fmt.Println(err)
+	// 	os.Exit(1)
+	// }
+
+	if err := grpcdb.ListenAndServe("127.0.0.1:4321"); err != nil {
+		log.Fatalf("BindServer: %v", err)
 	}
 }

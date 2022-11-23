@@ -63,6 +63,9 @@ func (rd *RemoteDB) Close() error {
 }
 
 func (rd *RemoteDB) Delete(key []byte) error {
+	if len(key) == 0 {
+		return errKeyEmpty
+	}
 	if _, err := rd.dc.Delete(rd.ctx, &protodb.Entity{Id: rd.id, Key: key}); err != nil {
 		return fmt.Errorf("remoteDB.Delete: %w", err)
 	}
@@ -77,6 +80,12 @@ func (rd *RemoteDB) DeleteSync(key []byte) error {
 }
 
 func (rd *RemoteDB) Set(key, value []byte) error {
+	if len(key) == 0 {
+		return errKeyEmpty
+	}
+	if value == nil {
+		return errValueNil
+	}
 	if _, err := rd.dc.Set(rd.ctx, &protodb.Entity{Id: rd.id, Key: key, Value: value}); err != nil {
 		return fmt.Errorf("remoteDB.Set: %w", err)
 	}
@@ -84,6 +93,12 @@ func (rd *RemoteDB) Set(key, value []byte) error {
 }
 
 func (rd *RemoteDB) SetSync(key, value []byte) error {
+	if len(key) == 0 {
+		return errKeyEmpty
+	}
+	if value == nil {
+		return errValueNil
+	}
 	if _, err := rd.dc.SetSync(rd.ctx, &protodb.Entity{Id: rd.id, Key: key, Value: value}); err != nil {
 		return fmt.Errorf("remoteDB.SetSync: %w", err)
 	}
@@ -91,9 +106,15 @@ func (rd *RemoteDB) SetSync(key, value []byte) error {
 }
 
 func (rd *RemoteDB) Get(key []byte) ([]byte, error) {
+	if len(key) == 0 {
+		return nil, errKeyEmpty
+	}
 	res, err := rd.dc.Get(rd.ctx, &protodb.Entity{Id: rd.id, Key: key})
 	if err != nil {
 		return nil, fmt.Errorf("remoteDB.Get error: %w", err)
+	}
+	if res == nil {
+		res.Value = []byte{}
 	}
 	return res.Value, nil
 }
@@ -133,6 +154,10 @@ func (rd *RemoteDB) Stats() map[string]string {
 }
 
 func (rd *RemoteDB) Iterator(start, end []byte) (Iterator, error) {
+	fmt.Printf("RemoteDB.Iterator: from id %v",rd.id)
+	if (start != nil && len(start) == 0) || (end != nil && len(end) == 0) {
+		return nil, errKeyEmpty
+	}
 	dic, err := rd.dc.Iterator(rd.ctx, &protodb.Entity{Id: rd.id, Start: start, End: end})
 	if err != nil {
 		return nil, fmt.Errorf("RemoteDB.Iterator error: %w", err)
