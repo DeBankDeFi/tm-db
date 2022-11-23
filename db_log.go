@@ -1,3 +1,3 @@
 package db
 
-var LOG_ON = true
+var LOG_ON = false
