@@ -59,13 +59,13 @@ func (rItr *reverseIterator) Next() {
 // Key implements Iterator.
 func (rItr *reverseIterator) Key() []byte {
 	rItr.assertIsValid()
-	return rItr.cur.Key
+	return cp(rItr.cur.Key)
 }
 
 // Value implements Iterator.
 func (rItr *reverseIterator) Value() []byte {
 	rItr.assertIsValid()
-	return rItr.cur.Value
+	return cp(rItr.cur.Value)
 }
 
 // Error implements Iterator.
@@ -122,13 +122,13 @@ func (itr *remoteIterator) Next() {
 // Key implements Iterator.
 func (itr *remoteIterator) Key() []byte {
 	itr.assertIsValid()
-	return itr.cur.Key
+	return cp(itr.cur.Key)
 }
 
 // Value implements Iterator.
 func (itr *remoteIterator) Value() []byte {
 	itr.assertIsValid()
-	return itr.cur.Value
+	return cp(itr.cur.Value)
 }
 
 // Error implements Iterator.

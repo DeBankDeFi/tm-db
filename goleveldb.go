@@ -59,8 +59,8 @@ func (db *GoLevelDB) Get(key []byte) ([]byte, error) {
 	val, err := db.innerGet(key)
 	if LOG_ON {
 		fmt.Printf("Get %X\n", key)
-		if len(val) <10000 {
-			fmt.Printf("Val %X => %+v\n", key, val)
+		if len(val) < 10000 {
+			fmt.Printf("Val %X => %+v , %+v \n", key, val, err)
 		}
 	}
 	return val, err
