@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	db "github.com/tendermint/tm-db"
 	"github.com/tendermint/tm-db/remotedb/grpcdb"
 )
 
@@ -40,7 +41,7 @@ func main() {
 	// 	fmt.Println(err)
 	// 	os.Exit(1)
 	// }
-
+	db.LOG_ON = true
 	if err := grpcdb.ListenAndServe("127.0.0.1:4321"); err != nil {
 		log.Fatalf("BindServer: %v", err)
 	}

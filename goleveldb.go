@@ -60,7 +60,7 @@ func (db *GoLevelDB) Get(key []byte) ([]byte, error) {
 	if LOG_ON {
 		fmt.Printf("Get %X\n", key)
 		if len(val) <10000 {
-			fmt.Printf("Val %X => %X\n", key, val)
+			fmt.Printf("Val %X => %+v\n", key, val)
 		}
 	}
 	return val, err
