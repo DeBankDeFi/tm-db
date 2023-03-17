@@ -1,3 +1,4 @@
+//go:build badgerdb
 // +build badgerdb
 
 package db
@@ -8,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/dgraph-io/badger/v2"
+	"github.com/dgraph-io/badger/v3"
 )
 
 func init() { registerDBCreator(BadgerDBBackend, badgerDBCreator, true) }
@@ -24,7 +25,7 @@ func NewBadgerDB(dbName, dir string) (*BadgerDB, error) {
 	// the final directory to use for the database.
 	path := filepath.Join(dir, dbName)
 
-	if err := os.MkdirAll(path, 0755); err != nil {
+	if err := os.MkdirAll(path, 0o755); err != nil {
 		return nil, err
 	}
 	opts := badger.DefaultOptions(path)
