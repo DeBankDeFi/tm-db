@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased
+## UNRELEASED
 
+- Migrate to linxGnu/grocksdb to support rocksdb v7
+- Add `NewRocksDBWithRawDB` for easier turning the options.
 - remove mutex from prefixdb
 
 ## 0.6.7
