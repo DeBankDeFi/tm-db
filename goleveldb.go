@@ -24,7 +24,13 @@ type GoLevelDB struct {
 var _ DB = (*GoLevelDB)(nil)
 
 func NewGoLevelDB(name string, dir string) (*GoLevelDB, error) {
-	return NewGoLevelDBWithOpts(name, dir, nil)
+	options := &opt.Options{
+		WriteBuffer:                   512 * opt.MiB,
+		CompactionL0Trigger:           8,
+		CompactionTableSize:           4 * opt.MiB,
+		CompactionTotalSizeMultiplier: 9,
+	}
+	return NewGoLevelDBWithOpts(name, dir, options)
 }
 
 func NewGoLevelDBWithOpts(name string, dir string, o *opt.Options) (*GoLevelDB, error) {
